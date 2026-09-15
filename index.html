@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Libreta de gastos</title>
+<style>
+  :root {
+    --ink: #14181C;
+    --card: #1D242B;
+    --card-2: #232B33;
+    --line: #313B45;
+    --amber: #D9A441;
+    --amber-dim: #8a6d2f;
+    --green: #4FAE82;
+    --text: #EDEAE1;
+    --muted: #8B93A0;
+    --danger: #C96856;
+    font-size: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    padding-bottom: 40px;
+  }
+
+  .wrap { max-width: 480px; margin: 0 auto; padding: 0 18px; }
+
+  header {
+    padding: 28px 18px 14px;
+    text-align: left;
+  }
+  header h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-weight: 400;
+    font-size: 1.7rem;
+    margin: 0 0 2px;
+    letter-spacing: 0.2px;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  .totals {
+    display: flex;
+    gap: 10px;
+    margin: 18px 0 4px;
+  }
+  .totals .box {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .totals .box .label {
+    color: var(--muted);
+    font-size: 0.72rem;
+    margin-bottom: 4px;
+  }
+  .totals .box .value {
+    font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin-top: 18px;
+  }
+
+  .type-toggle {
+    display: flex;
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .type-toggle button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    padding: 10px 0;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .type-toggle button.active.gasto {
+    background: var(--amber);
+    color: #1a1a1a;
+  }
+  .type-toggle button.active.ingreso {
+    background: var(--green);
+    color: #10251c;
+  }
+
+  .amount-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 0 18px;
+  }
+  .amount-row .currency {
+    font-family: "SF Mono", ui-monospace, monospace;
+    font-size: 1.6rem;
+    color: var(--muted);
+  }
+  .amount-row input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+    font-size: 2.6rem;
+    width: 100%;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .card.ingreso .amount-row input,
+  .card.ingreso .amount-row .currency { color: var(--green); }
+  .card.ingreso .save-btn { background: var(--green); color: #10251c; }
+  .amount-row input::placeholder { color: var(--line); }
+
+  .field-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 14px 0 8px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--card-2);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #1a1a1a;
+    font-weight: 600;
+  }
+  .chip.small { padding: 7px 12px; font-size: 0.8rem; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%;
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 11px 12px;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  input[type="text"]::placeholder { color: var(--muted); }
+
+  .save-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 11px;
+    border: none;
+    background: var(--amber);
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .save-btn:active { opacity: 0.85; }
+  .save-btn:disabled { background: var(--amber-dim); color: #55503f; cursor: default; }
+
+  .section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 30px 0 10px;
+  }
+  .section-title h2 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .export-link {
+    color: var(--green);
+    font-size: 0.8rem;
+    text-decoration: none;
+    border: 1px solid var(--green);
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+
+  .entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .entry:last-child { border-bottom: none; }
+  .entry .cat-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber);
+    flex-shrink: 0;
+  }
+  .entry .info { flex: 1; min-width: 0; }
+  .entry .info .desc {
+    font-size: 0.92rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .entry .info .meta {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .entry .amount {
+    font-family: "SF Mono", ui-monospace, monospace;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .entry .del {
+    color: var(--muted);
+    background: none; border: none;
+    font-size: 1.1rem;
+    padding: 4px 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .empty {
+    color: var(--muted);
+    font-size: 0.88rem;
+    text-align: center;
+    padding: 30px 0;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%; bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--green);
+    color: #10251c;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Libreta de gastos</h1>
+    <p>Captura rápida de gastos variables</p>
+  </header>
+
+  <div class="totals">
+    <div class="box">
+      <div class="label">Balance hoy</div>
+      <div class="value" id="totalHoy">€0.00</div>
+    </div>
+    <div class="box">
+      <div class="label">Balance del mes</div>
+      <div class="value" id="totalMes">€0.00</div>
+    </div>
+  </div>
+
+  <div class="card" id="entryCard">
+    <div class="type-toggle">
+      <button id="btnGasto" class="active gasto">Gasto</button>
+      <button id="btnIngreso" class="ingreso">Ingreso</button>
+    </div>
+    <div class="amount-row">
+      <span class="currency">€</span>
+      <input id="amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+    </div>
+
+    <div class="field-label">Categoría</div>
+    <div class="chips" id="catChips"></div>
+    <input type="text" id="catCustom" placeholder="Otra categoría…" style="margin-top:8px; display:none;">
+
+    <div class="field-label">Descripción (opcional)</div>
+    <input type="text" id="desc" placeholder="Ej. Café con Ana">
+
+    <div class="field-label">Cuenta</div>
+    <div class="chips" id="cuentaChips"></div>
+
+    <div class="field-label">Fecha</div>
+    <input type="date" id="fecha">
+
+    <button class="save-btn" id="saveBtn">Guardar gasto</button>
+  </div>
+
+  <div class="section-title">
+    <h2>Últimos movimientos</h2>
+    <a href="#" class="export-link" id="exportBtn">Exportar CSV</a>
+  </div>
+  <div id="list"></div>
+</div>
+
+<div class="toast" id="toast">Gasto guardado</div>
+
+<script>
+const CATEGORIAS_GASTO = ["Comida", "Transporte", "Ocio", "Compras", "Salud", "Casa", "Otro"];
+const CATEGORIAS_INGRESO = ["Salario", "Freelance", "Venta", "Regalo", "Reembolso", "Otro"];
+const CUENTAS = ["Efectivo", "Débito", "Crédito"];
+const STORAGE_KEY = "gastos-variables";
+
+let entries = [];
+let selectedType = "Gasto";
+let selectedCat = null;
+let selectedCuenta = null;
+
+const $ = (id) => document.getElementById(id);
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+
+function money(n) {
+  return "€" + Number(n).toFixed(2);
+}
+
+function setType(type) {
+  selectedType = type;
+  selectedCat = null;
+  $("catCustom").style.display = "none";
+  $("catCustom").value = "";
+  $("btnGasto").classList.toggle("active", type === "Gasto");
+  $("btnIngreso").classList.toggle("active", type === "Ingreso");
+  $("entryCard").classList.toggle("ingreso", type === "Ingreso");
+  renderChips();
+}
+
+function renderChips() {
+  const catBox = $("catChips");
+  catBox.innerHTML = "";
+  const CATEGORIAS = selectedType === "Gasto" ? CATEGORIAS_GASTO : CATEGORIAS_INGRESO;
+  CATEGORIAS.forEach(c => {
+    const chip = document.createElement("div");
+    chip.className = "chip" + (selectedCat === c ? " active" : "");
+    chip.textContent = c;
+    chip.onclick = () => {
+      selectedCat = c;
+      $("catCustom").style.display = "none";
+      $("catCustom").value = "";
+      renderChips();
+    };
+    catBox.appendChild(chip);
+  });
+  const otherChip = document.createElement("div");
+  otherChip.className = "chip" + (selectedCat === "__custom" ? " active" : "");
+  otherChip.textContent = "+ Otra";
+  otherChip.onclick = () => {
+    selectedCat = "__custom";
+    $("catCustom").style.display = "block";
+    $("catCustom").focus();
+    renderChips();
+  };
+  catBox.appendChild(otherChip);
+
+  const cuentaBox = $("cuentaChips");
+  cuentaBox.innerHTML = "";
+  CUENTAS.forEach(c => {
+    const chip = document.createElement("div");
+    chip.className = "chip small" + (selectedCuenta === c ? " active" : "");
+    chip.textContent = c;
+    chip.onclick = () => { selectedCuenta = c; renderChips(); };
+    cuentaBox.appendChild(chip);
+  });
+}
+
+function renderList() {
+  const list = $("list");
+  list.innerHTML = "";
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="empty">Todavía no has registrado ningún gasto.</div>';
+    return;
+  }
+  const sorted = [...entries].sort((a,b) => (b.fecha + b.id) > (a.fecha + a.id) ? 1 : -1).slice(0, 30);
+  sorted.forEach(e => {
+    const row = document.createElement("div");
+    row.className = "entry";
+    const isIngreso = e.tipo === "Ingreso";
+    const sign = isIngreso ? "+" : "−";
+    const color = isIngreso ? "var(--green)" : "var(--amber)";
+    row.innerHTML = `
+      <div class="cat-dot" style="background:${color}"></div>
+      <div class="info">
+        <div class="desc">${e.descripcion ? escapeHtml(e.descripcion) : e.categoria}</div>
+        <div class="meta">${e.categoria} · ${e.cuenta} · ${formatDate(e.fecha)}</div>
+      </div>
+      <div class="amount" style="color:${color}">${sign}${money(e.importe)}</div>
+      <button class="del" data-id="${e.id}">✕</button>
+    `;
+    row.querySelector(".del").onclick = () => deleteEntry(e.id);
+    list.appendChild(row);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+function formatDate(iso) {
+  const [y,m,d] = iso.split("-");
+  return d + "/" + m;
+}
+
+function updateTotals() {
+  const today = todayStr();
+  const thisMonth = today.slice(0,7);
+  let sumHoy = 0, sumMes = 0;
+  entries.forEach(e => {
+    const signed = e.tipo === "Ingreso" ? Number(e.importe) : -Number(e.importe);
+    if (e.fecha === today) sumHoy += signed;
+    if (e.fecha.slice(0,7) === thisMonth) sumMes += signed;
+  });
+  $("totalHoy").textContent = (sumHoy < 0 ? "−" : "") + money(Math.abs(sumHoy));
+  $("totalMes").textContent = (sumMes < 0 ? "−" : "") + money(Math.abs(sumMes));
+}
+
+async function loadEntries() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    entries = [];
+  }
+  renderList();
+  updateTotals();
+}
+
+async function saveEntries() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  } catch (e) {
+    console.error("No se pudo guardar", e);
+  }
+}
+
+function showToast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+async function saveExpense() {
+  const amountVal = parseFloat($("amount").value.replace(",", "."));
+  const cat = selectedCat === "__custom" ? $("catCustom").value.trim() : selectedCat;
+
+  if (!amountVal || amountVal <= 0) {
+    $("amount").focus();
+    return;
+  }
+  if (!cat) {
+    showToast("Elige una categoría");
+    return;
+  }
+  if (!selectedCuenta) {
+    showToast("Elige una cuenta");
+    return;
+  }
+
+  const entry = {
+    id: Date.now() + "-" + Math.random().toString(36).slice(2,7),
+    tipo: selectedType,
+    fecha: $("fecha").value || todayStr(),
+    categoria: cat,
+    descripcion: $("desc").value.trim(),
+    importe: amountVal,
+    cuenta: selectedCuenta,
+    estado: "Pagado"
+  };
+
+  entries.push(entry);
+  await saveEntries();
+  renderList();
+  updateTotals();
+  showToast("Gasto guardado");
+
+  $("amount").value = "";
+  $("desc").value = "";
+  $("amount").focus();
+}
+
+async function deleteEntry(id) {
+  entries = entries.filter(e => e.id !== id);
+  await saveEntries();
+  renderList();
+  updateTotals();
+}
+
+function exportCsv() {
+  const header = "ID,Fecha,Categoria,Descripcion,Importe,Cuenta,Estado\n";
+  const rows = entries
+    .slice()
+    .sort((a,b) => a.fecha.localeCompare(b.fecha))
+    .map(e => {
+      const signedImporte = (e.tipo === "Ingreso" ? e.importe : -e.importe).toFixed(2);
+      return [
+        e.id,
+        e.fecha,
+        csvEscape(e.categoria),
+        csvEscape(e.descripcion),
+        signedImporte,
+        csvEscape(e.cuenta),
+        e.estado
+      ].join(",");
+    })
+    .join("\n");
+  const csv = header + rows;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "gastos_variables_" + todayStr() + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(s) {
+  if (!s) return "";
+  if (s.includes(",") || s.includes('"')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+$("btnGasto").addEventListener("click", () => setType("Gasto"));
+$("btnIngreso").addEventListener("click", () => setType("Ingreso"));
+$("saveBtn").addEventListener("click", saveExpense);
+$("exportBtn").addEventListener("click", (e) => { e.preventDefault(); exportCsv(); });
+$("fecha").value = todayStr();
+
+renderChips();
+loadEntries();
+</script>
+</body>
+</html>
